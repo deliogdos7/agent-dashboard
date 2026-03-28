@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-03-28T23:03:04.277729+00:00",
+  "last_updated": "2026-03-28T23:03:05.688783+00:00",
   "agents": {
     "BTC 15min (Kalshi)": {
       "mode": "live",
@@ -17,7 +17,7 @@
       "losses": 0,
       "series": "btc-updown-15m",
       "strategies": "CORR,VS,SC,LSB,XPLAT,YMV,LIQ,DRIFT,EQUITY,HL,VWAP + gaps",
-      "last_heartbeat": "2026-03-28T22:44:27.913386+00:00"
+      "last_heartbeat": "2026-03-28T23:03:05.688643+00:00"
     }
   },
   "positions": [
