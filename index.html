@@ -170,6 +170,79 @@
     color: var(--muted);
   }
   .auto-refresh .dot { color: var(--green); }
+
+  /* Positions Section */
+  .section-title {
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--cyan);
+    margin: 32px auto 16px;
+    max-width: 1200px;
+    letter-spacing: 1px;
+  }
+  .positions-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .pos-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .pos-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 0.7em;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .pos-table td {
+    padding: 10px 14px;
+    font-size: 0.85em;
+    border-bottom: 1px solid var(--border);
+  }
+  .pos-table tr:last-child td { border-bottom: none; }
+  .pos-table tr:hover { background: rgba(255,255,255,0.02); }
+  .type-badge {
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .type-btc { background: rgba(255,215,64,0.15); color: var(--yellow); }
+  .type-ufc { background: rgba(255,82,82,0.15); color: var(--red); }
+  .type-other { background: rgba(107,107,128,0.15); color: var(--muted); }
+  .btc-banner {
+    max-width: 1200px;
+    margin: 0 auto 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85em;
+  }
+  .btc-banner .label { color: var(--muted); }
+  .btc-banner .price { color: var(--yellow); font-size: 1.2em; font-weight: 600; }
+  .pos-summary {
+    max-width: 1200px;
+    margin: 12px auto 0;
+    display: flex;
+    gap: 24px;
+    font-size: 0.8em;
+    color: var(--muted);
+  }
+  .pos-summary .val { color: var(--text); font-weight: 600; }
+  .pos-summary .val.positive { color: var(--green); }
 </style>
 </head>
 <body>
@@ -183,6 +256,36 @@
 
 <div class="grid" id="agentGrid">
   <div class="no-agents">Connecting to agents...</div>
+</div>
+
+<div class="section-title" id="posTitle" style="display:none">📊 OPEN POSITIONS</div>
+
+<div id="btcBanner" class="btc-banner" style="display:none">
+  <div><span class="label">Bitcoin:</span> <span class="price" id="btcPrice">—</span></div>
+  <div><span class="label">Positions updated:</span> <span id="posUpdated" style="color:var(--cyan)">—</span></div>
+</div>
+
+<div class="positions-grid">
+  <table class="pos-table" id="posTable" style="display:none">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Position</th>
+        <th>Shares</th>
+        <th>Price/Share</th>
+        <th>Exposure</th>
+        <th>Payout if ✓</th>
+        <th>Profit if ✓</th>
+      </tr>
+    </thead>
+    <tbody id="posBody"></tbody>
+  </table>
+</div>
+
+<div class="pos-summary" id="posSummary" style="display:none">
+  <div>Total exposure: <span class="val" id="totalExposure">—</span></div>
+  <div>Total payout if all win: <span class="val positive" id="totalPayout">—</span></div>
+  <div>Positions: <span class="val" id="posCount">—</span></div>
 </div>
 
 <div class="footer">
@@ -289,8 +392,105 @@ async function refresh() {
   }
 }
 
-refresh();
-setInterval(refresh, 60000);
+function renderPositions(data) {
+  const positions = data.positions || [];
+  const posTitle = document.getElementById('posTitle');
+  const btcBanner = document.getElementById('btcBanner');
+  const posTable = document.getElementById('posTable');
+  const posBody = document.getElementById('posBody');
+  const posSummary = document.getElementById('posSummary');
+
+  if (positions.length === 0) {
+    posTitle.style.display = 'none';
+    btcBanner.style.display = 'none';
+    posTable.style.display = 'none';
+    posSummary.style.display = 'none';
+    return;
+  }
+
+  posTitle.style.display = 'block';
+  posTable.style.display = 'table';
+  posSummary.style.display = 'flex';
+
+  // BTC price banner
+  if (data.btc_price) {
+    btcBanner.style.display = 'flex';
+    document.getElementById('btcPrice').textContent = '$' + parseFloat(data.btc_price).toLocaleString();
+  }
+  if (data.positions_updated) {
+    document.getElementById('posUpdated').textContent = timeAgo(data.positions_updated);
+  }
+
+  let totalExposure = 0;
+  let totalPayout = 0;
+
+  posBody.innerHTML = positions.map(p => {
+    totalExposure += p.exposure || 0;
+    totalPayout += p.payout_if_win || 0;
+
+    const typeClass = p.type === 'btc' ? 'type-btc' : p.type === 'ufc' ? 'type-ufc' : 'type-other';
+    const typeLabel = p.type === 'btc' ? '₿ BTC' : p.type === 'ufc' ? '🥊 UFC' : p.type;
+
+    let title = '';
+    if (p.type === 'btc') {
+      title = p.strike ? 'BTC > $' + parseFloat(p.strike).toLocaleString() : p.title;
+    } else if (p.type === 'ufc') {
+      title = p.fighter || p.title || p.ticker;
+    } else {
+      title = p.title || p.ticker;
+    }
+
+    const priceStr = p.current_price != null ? '$' + parseFloat(p.current_price).toFixed(2) : '—';
+    const profitStr = p.profit_if_win != null ? '+$' + parseFloat(p.profit_if_win).toFixed(2) : '—';
+    const profitClass = p.profit_if_win > 0 ? 'positive' : '';
+
+    return `<tr>
+      <td><span class="type-badge ${typeClass}">${typeLabel}</span></td>
+      <td>${title}</td>
+      <td>${p.shares}</td>
+      <td>${priceStr}</td>
+      <td>$${(p.exposure || 0).toFixed(2)}</td>
+      <td>$${(p.payout_if_win || 0).toFixed(2)}</td>
+      <td class="${profitClass}">${profitStr}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('totalExposure').textContent = '$' + totalExposure.toFixed(2);
+  document.getElementById('totalPayout').textContent = '$' + totalPayout.toFixed(2);
+  document.getElementById('posCount').textContent = positions.length;
+}
+
+async function refreshAll() {
+  try {
+    const resp = await fetch('status.json?t=' + Date.now());
+    const data = await resp.json();
+
+    // Update header timestamp
+    const updatedEl = document.getElementById('lastUpdated');
+    if (data.last_updated) {
+      const stale = isStale(data.last_updated);
+      updatedEl.innerHTML = `Last updated: <span class="${stale ? 'stale' : 'time'}">${timeAgo(data.last_updated)}${stale ? ' ⚠ STALE' : ''}</span>`;
+    }
+
+    // Render agents
+    const grid = document.getElementById('agentGrid');
+    const agents = data.agents || {};
+    const names = Object.keys(agents);
+    if (names.length === 0) {
+      grid.innerHTML = '<div class="no-agents">No agents reporting yet</div>';
+    } else {
+      grid.innerHTML = names.map(n => renderAgent(n, agents[n])).join('');
+    }
+
+    // Render positions
+    renderPositions(data);
+  } catch (e) {
+    console.error('Refresh failed:', e);
+  }
+}
+
+refreshAll();
+setInterval(refreshAll, 60000);
 </script>
 
 </body>
