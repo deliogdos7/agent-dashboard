@@ -1,4 +1,14 @@
 {
-  "last_updated": "",
-  "agents": {}
+  "last_updated": "2026-03-28T22:44:22.581100+00:00",
+  "agents": {
+    "BTC 15min (Kalshi)": {
+      "mode": "live",
+      "bankroll": 751.22,
+      "wins": 60,
+      "losses": 26,
+      "series": "KXBTC15M",
+      "strategies": "CORR,VS,SC,LSB,XPLAT,YMV,LIQ,DRIFT,EQUITY,HL,VWAP + gaps",
+      "last_heartbeat": "2026-03-28T22:44:22.580989+00:00"
+    }
+  }
 }
