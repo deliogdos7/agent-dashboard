@@ -368,7 +368,7 @@ function renderAgent(name, agent) {
 
 async function refresh() {
   try {
-    const resp = await fetch('status.json?t=' + Date.now());
+    const resp = await fetch('https://raw.githubusercontent.com/deliogdos7/agent-dashboard/main/status.json?t=' + Date.now());
     const data = await resp.json();
 
     const updatedEl = document.getElementById('lastUpdated');
@@ -462,7 +462,7 @@ function renderPositions(data) {
 
 async function refreshAll() {
   try {
-    const resp = await fetch('status.json?t=' + Date.now());
+    const resp = await fetch('https://raw.githubusercontent.com/deliogdos7/agent-dashboard/main/status.json?t=' + Date.now());
     const data = await resp.json();
 
     // Update header timestamp
