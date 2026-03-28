@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mission Control — Agent Dashboard</title>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --card-bg: #12121a;
+    --border: #1e1e2e;
+    --text: #e0e0e8;
+    --muted: #6b6b80;
+    --green: #00e676;
+    --red: #ff5252;
+    --yellow: #ffd740;
+    --blue: #448aff;
+    --purple: #b388ff;
+    --cyan: #18ffff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    min-height: 100vh;
+    padding: 24px;
+  }
+  .header {
+    text-align: center;
+    margin-bottom: 32px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .header h1 {
+    font-size: 1.6em;
+    font-weight: 600;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, var(--cyan), var(--purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header .subtitle {
+    color: var(--muted);
+    font-size: 0.85em;
+    margin-top: 6px;
+  }
+  .last-updated {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.75em;
+    margin-bottom: 24px;
+  }
+  .last-updated .time { color: var(--cyan); }
+  .last-updated .stale { color: var(--yellow); }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 16px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color: var(--purple); }
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .agent-name {
+    font-size: 1.1em;
+    font-weight: 600;
+  }
+  .status-badge {
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .status-live { background: rgba(0,230,118,0.15); color: var(--green); border: 1px solid rgba(0,230,118,0.3); }
+  .status-paper { background: rgba(179,136,255,0.15); color: var(--purple); border: 1px solid rgba(179,136,255,0.3); }
+  .status-dead { background: rgba(255,82,82,0.15); color: var(--red); border: 1px solid rgba(255,82,82,0.3); }
+  .status-idle { background: rgba(107,107,128,0.15); color: var(--muted); border: 1px solid rgba(107,107,128,0.3); }
+  .pulse {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    margin-right: 6px;
+    animation: pulse 2s infinite;
+  }
+  .pulse-live { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .pulse-paper { background: var(--purple); box-shadow: 0 0 8px var(--purple); }
+  .pulse-dead { background: var(--red); animation: none; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .stat {
+    background: rgba(255,255,255,0.03);
+    border-radius: 8px;
+    padding: 10px 12px;
+  }
+  .stat-label {
+    font-size: 0.65em;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .stat-value {
+    font-size: 1.15em;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .positive { color: var(--green); }
+  .negative { color: var(--red); }
+  .stat-value.neutral { color: var(--text); }
+  .strategies {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 0.75em;
+    color: var(--muted);
+  }
+  .strategies span { color: var(--cyan); }
+  .last-trade {
+    margin-top: 8px;
+    font-size: 0.7em;
+    color: var(--muted);
+  }
+  .last-trade .time { color: var(--blue); }
+  .no-agents {
+    text-align: center;
+    color: var(--muted);
+    padding: 60px;
+    font-size: 1.1em;
+  }
+  .footer {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.65em;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .footer a { color: var(--purple); text-decoration: none; }
+  .auto-refresh {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 12px;
+    font-size: 0.7em;
+    color: var(--muted);
+  }
+  .auto-refresh .dot { color: var(--green); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>✨ MISSION CONTROL</h1>
+  <div class="subtitle">Agent Status Dashboard</div>
+</div>
+
+<div class="last-updated" id="lastUpdated">Loading...</div>
+
+<div class="grid" id="agentGrid">
+  <div class="no-agents">Connecting to agents...</div>
+</div>
+
+<div class="footer">
+  Powered by <a href="#">Lumina</a> · Auto-refreshes every 60s
+</div>
+
+<div class="auto-refresh"><span class="dot">●</span> Live · refreshes every 60s</div>
+
+<script>
+const STALE_THRESHOLD = 300; // 5 minutes in seconds
+
+function formatMoney(v) {
+  if (v == null) return '—';
+  const n = parseFloat(v);
+  const sign = n >= 0 ? '+' : '';
+  return sign + '$' + Math.abs(n).toFixed(2);
+}
+
+function formatMoneyClass(v) {
+  if (v == null) return 'neutral';
+  return parseFloat(v) >= 0 ? 'positive' : 'negative';
+}
+
+function timeAgo(isoStr) {
+  if (!isoStr) return 'never';
+  const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+  if (diff < 60) return Math.floor(diff) + 's ago';
+  if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+  return Math.floor(diff / 86400) + 'd ago';
+}
+
+function isStale(isoStr) {
+  if (!isoStr) return true;
+  return (Date.now() - new Date(isoStr).getTime()) / 1000 > STALE_THRESHOLD;
+}
+
+function getStatus(agent) {
+  if (isStale(agent.last_heartbeat)) return 'dead';
+  return agent.mode || 'live';
+}
+
+function renderAgent(name, agent) {
+  const status = getStatus(agent);
+  const statusLabel = status === 'dead' ? '⚠ OFFLINE' : status === 'paper' ? '📄 PAPER' : '⚡ LIVE';
+  const statusClass = status === 'dead' ? 'status-dead' : status === 'paper' ? 'status-paper' : 'status-live';
+  const pulseClass = status === 'dead' ? 'pulse-dead' : status === 'paper' ? 'pulse-paper' : 'pulse-live';
+
+  return `
+    <div class="card">
+      <div class="card-header">
+        <div class="agent-name"><span class="pulse ${pulseClass}"></span>${name}</div>
+        <div class="status-badge ${statusClass}">${statusLabel}</div>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <div class="stat-label">Bankroll</div>
+          <div class="stat-value neutral">$${parseFloat(agent.bankroll || 0).toFixed(2)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Today P&L</div>
+          <div class="stat-value ${formatMoneyClass(agent.today_pnl)}">${formatMoney(agent.today_pnl)}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">W / L</div>
+          <div class="stat-value neutral">${agent.wins || 0} / ${agent.losses || 0}</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">All-Time P&L</div>
+          <div class="stat-value ${formatMoneyClass(agent.total_pnl)}">${formatMoney(agent.total_pnl)}</div>
+        </div>
+      </div>
+      ${agent.series ? `<div class="strategies">Series: <span>${agent.series}</span></div>` : ''}
+      ${agent.strategies ? `<div class="strategies">Strategies: <span>${agent.strategies}</span></div>` : ''}
+      <div class="last-trade">Last heartbeat: <span class="time">${timeAgo(agent.last_heartbeat)}</span></div>
+      ${agent.last_trade_time ? `<div class="last-trade">Last trade: <span class="time">${timeAgo(agent.last_trade_time)}</span></div>` : ''}
+    </div>
+  `;
+}
+
+async function refresh() {
+  try {
+    const resp = await fetch('status.json?t=' + Date.now());
+    const data = await resp.json();
+
+    const updatedEl = document.getElementById('lastUpdated');
+    if (data.last_updated) {
+      const stale = isStale(data.last_updated);
+      updatedEl.innerHTML = `Last updated: <span class="${stale ? 'stale' : 'time'}">${timeAgo(data.last_updated)}${stale ? ' ⚠ STALE' : ''}</span>`;
+    }
+
+    const grid = document.getElementById('agentGrid');
+    const agents = data.agents || {};
+    const names = Object.keys(agents);
+
+    if (names.length === 0) {
+      grid.innerHTML = '<div class="no-agents">No agents reporting yet</div>';
+      return;
+    }
+
+    grid.innerHTML = names.map(n => renderAgent(n, agents[n])).join('');
+  } catch (e) {
+    console.error('Refresh failed:', e);
+  }
+}
+
+refresh();
+setInterval(refresh, 60000);
+</script>
+
+</body>
+</html>
