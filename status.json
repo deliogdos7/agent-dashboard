@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-03-28T22:44:22.581100+00:00",
+  "last_updated": "2026-03-28T22:44:27.913489+00:00",
   "agents": {
     "BTC 15min (Kalshi)": {
       "mode": "live",
@@ -9,6 +9,15 @@
       "series": "KXBTC15M",
       "strategies": "CORR,VS,SC,LSB,XPLAT,YMV,LIQ,DRIFT,EQUITY,HL,VWAP + gaps",
       "last_heartbeat": "2026-03-28T22:44:22.580989+00:00"
+    },
+    "BTC 15min (Polymarket)": {
+      "mode": "paper",
+      "bankroll": 1000.0,
+      "wins": 0,
+      "losses": 0,
+      "series": "btc-updown-15m",
+      "strategies": "CORR,VS,SC,LSB,XPLAT,YMV,LIQ,DRIFT,EQUITY,HL,VWAP + gaps",
+      "last_heartbeat": "2026-03-28T22:44:27.913386+00:00"
     }
   }
 }
